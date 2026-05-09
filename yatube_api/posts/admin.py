@@ -1,28 +1,36 @@
 from django.contrib import admin
 
-from posts.models import Comment, Follow, Group, Post
+from .models import Comment, Group, Post, Follow
+
+
+class CommentInline(admin.TabularInline):
+    model = Comment
+    fk_name = "post"
 
 
 class PostAdmin(admin.ModelAdmin):
     list_display = ('pk', 'text', 'pub_date', 'author', 'group')
-    list_display_links = ('text', 'author')
-    list_editable = ('group',)
-    list_filter = ('pub_date', 'group')
-    empty_value_display = '-пусто-'
     search_fields = ('text',)
+    list_filter = ('pub_date', 'group')
+    ordering = ('-pub_date',)
+    empty_value_display = '-пусто-'
+    inlines = [
+        CommentInline,
+    ]
 
 
 class GroupAdmin(admin.ModelAdmin):
-    list_display = ('pk', 'title', 'slug', 'description')
-    list_display_links = ('title',)
-    list_editable = ('slug',)
+    list_display = ('title', 'slug', 'description',)
+    search_fields = ('slug',)
+    list_filter = ('title',)
     empty_value_display = '-пусто-'
 
 
 class CommentAdmin(admin.ModelAdmin):
-    list_display = ('pk', 'text', 'author', 'post', 'created')
-    list_editable = ('text',)
-    list_display_links = ('pk',)
+    list_display = ('pk', 'author', 'post', 'text', 'created',)
+    search_fields = ('author',)
+    list_filter = ('post',)
+    ordering = ('-created',)
     empty_value_display = '-пусто-'
 
 
