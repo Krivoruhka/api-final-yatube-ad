@@ -1,58 +1,79 @@
+from posts.models import Comment, Follow, Group, Post, User
 from rest_framework import serializers
-from rest_framework.relations import SlugRelatedField
-from rest_framework.serializers import ValidationError, CurrentUserDefault
-
-from posts.models import Comment, Post, Group, Follow, User
+from rest_framework.serializers import CurrentUserDefault
 
 
 class PostSerializer(serializers.ModelSerializer):
-    author = SlugRelatedField(slug_field='username', read_only=True)
+    '''Серилизатор постов. '''
 
-    class Meta:
-        fields = ('id', 'text', 'author', 'image', 'group', 'pub_date')
-        model = Post
-
-
-class CommentSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
-        read_only=True, slug_field='username'
+        slug_field='username',
+        read_only=True,
     )
 
     class Meta:
-        fields = ('id', 'author', 'post', 'text', 'created')
+        model = Post
+        fields = (
+            'id', 'text', 'author', 'image', 'group', 'pub_date', 'comments'
+        )
+        read_only_fields = ('comments',)
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    '''Серилизатор комментариев. '''
+
+    author = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='username',
+    )
+
+    class Meta:
         model = Comment
-        read_only_fields = ('author', 'post')
+        fields = ('id', 'text', 'author', 'created', 'post')
+        read_only_fields = ('post',)
 
 
 class GroupSerializer(serializers.ModelSerializer):
+    '''Серилизатор групп. '''
 
     class Meta:
         model = Group
         fields = ('id', 'title', 'slug', 'description')
 
 
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'password')
+
+
 class FollowSerializer(serializers.ModelSerializer):
+    '''Серилизатор подписок. '''
     user = serializers.SlugRelatedField(
-        read_only=True,
         slug_field='username',
-        default=CurrentUserDefault()
+        read_only=True,
+        default=CurrentUserDefault(),
     )
     following = serializers.SlugRelatedField(
+        slug_field='username',
+        read_only=False,
         queryset=User.objects.all(),
-        slug_field='username'
     )
-
-    def validate(self, data):
-        if self.context.get('request').user == data.get('following'):
-            raise ValidationError('Нельзя подписаться на себя')
-        return data
 
     class Meta:
         model = Follow
-        fields = ('user', 'following')
+        fields = ('id', 'user', 'following')
         validators = (
             serializers.UniqueTogetherValidator(
                 queryset=Follow.objects.all(),
-                fields=('user', 'following')
+                fields=('user', 'following'),
+                message='Вы уже подписаны на данного автора!',
             ),
         )
+
+    def validate(self, data):
+        if self.context['request'].user == data['following']:
+            raise serializers.ValidationError(
+                'Вы не можете подписаться сам на себя!'
+            )
+        return data
